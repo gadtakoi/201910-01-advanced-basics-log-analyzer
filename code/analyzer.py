@@ -38,12 +38,8 @@ class LogAnalyzer:
 
     def parse_log_file(self):
         if self.filedata:
-            if self.filedata.ext == 'gz':
-                open_file = gzip.open(self.filedata.path, 'rt')
-            else:
-                open_file = open(self.filedata.path)
-
-            with open_file as file_handler:
+            open_file = gzip.open if self.filedata.ext == 'gz' else open
+            with open_file(self.filedata.path, 'rt') as file_handler:
                 for line in self.read_line(file_object=file_handler):
                     parsed_line = self.parse_line(line=line)
                     self.data_collector(line=parsed_line)

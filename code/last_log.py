@@ -14,11 +14,12 @@ class LastLog:
             files.extend(filenames)
 
         for file in files:
-            log_date_str = re.search(r"(\d{8})(?!([a-z.]*)bz2)", file)
+            log_date_str = re.match(
+                r'^nginx-access-ui\.log-(?P<date>\d{8})(\.gz)?$', file)
             if log_date_str:
                 try:
-                    log_date = datetime.datetime.strptime(log_date_str.group(),
-                                                          "%Y%m%d").date()
+                    log_date = datetime.datetime.strptime(
+                        log_date_str.group('date'), "%Y%m%d").date()
                     log_dates.append(log_date)
                     log_files[str(log_date)] = file
                 except ValueError:
