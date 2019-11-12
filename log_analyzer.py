@@ -32,7 +32,10 @@ def main():
                         format='[%(asctime)s] %(levelname).1s %(message)s',
                         level=logging.DEBUG)
     lastlog = LastLog().get_last_log(config=conf)
-    LogAnalyzer(config=conf, filedata=lastlog).run()
+    if lastlog:
+        LogAnalyzer(config=conf, filedata=lastlog).run()
+    else:
+        logging.info('Лог не найден')
 
 
 if __name__ == "__main__":
