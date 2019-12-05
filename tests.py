@@ -3,8 +3,8 @@ import os
 import unittest
 from collections import namedtuple
 
-from code.analyzer import LogAnalyzer
-from code.config import LogAnalyzerConf
+from code.analyzer import LogAnalyzer, LogParser
+from log_analyzer import get_config
 from log_analyzer import config
 
 
@@ -12,14 +12,14 @@ class TestStringMethods(unittest.TestCase):
 
     def test_get_config(self):
         config_file = 'config.py'
-        conf = LogAnalyzerConf().get_config(default_config=config,
+        conf = get_config(default_config=config,
                                             config_file=config_file)
         self.assertEqual(conf['REPORT_SIZE'], 1000)
 
     def test_parse_line(self):
         parse_line = '1.194.135.240 -  - [29/Jun/2017:03:51:06 +0300] "GET /api/v2/group/6867433/statistic/sites/?date_type=day&date_from=2017-06-29&date_to=2017-06-29 HTTP/1.1" 200 22 "-" "python-requests/2.13.0" "-" "1498697466-3979856266-4708-9753261" "8a7741a54297568b" 0.075'
 
-        pl = LogAnalyzer(config=config, filedata='').parse_line(parse_line)
+        pl = LogParser(filedata='').parse_line(parse_line)
         self.assertEqual(pl[1], '0.075')
 
     def test_main_log_analyzer(self):
