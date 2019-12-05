@@ -18,9 +18,9 @@ class LogAnalyzer:
         try:
             if not self.report_exists():
                 parsed_log = LogParser(filedata=self.filedata).parse_log_file()
-                prepared = self.prepare_data(parsed_log=parsed_log)
-                sorted_urls = self.sort_and_slice(prepared=prepared)
-                self.create_report(log_data=sorted_urls)
+                prepared = Calculate.prepare_data(parsed_log=parsed_log)
+                sorted_urls = LogSorter(self.config).sort_and_slice(prepared)
+                Report(self.config, self.filedata).create(log_data=sorted_urls)
                 self.error_threshold(parsed_log=parsed_log)
         except KeyboardInterrupt:
             logging.exception('Нажатие CTRL-C')
@@ -30,58 +30,6 @@ class LogAnalyzer:
             self.config['REPORT_DIR'],
             self.filedata.date.replace('-', '.'))
         return os.path.exists(report_name)
-
-    def prepare_data(self, parsed_log: dict) -> dict:
-        out = dict()
-        for key, value in parsed_log['collected'].items():
-            count = value['count']
-            count_perc = round(count / (parsed_log['total_count'] / 100), 3)
-            time_sum = round(value['time_sum'], 3)
-            time_perc = round(
-                time_sum / (parsed_log['request_time_total'] / 100), 3)
-            time_avg = round(time_sum / count, 3)
-            time_max = value['time_max']
-            time_med = round(median(value['all_request_time']), 3)
-            item = {
-                'count': count,
-                'count_perc': count_perc,
-                'time_sum': time_sum,
-                'time_perc': time_perc,
-                'time_avg': time_avg,
-                'time_max': time_max,
-                'time_med': time_med,
-            }
-            out[key] = item
-
-        return out
-
-    def sort_and_slice(self, prepared: dict) -> list:
-        def localkey(k):
-            return k[1]['time_sum']
-
-        out = list()
-        for item, val in sorted(prepared.items(), key=localkey, reverse=True):
-            val['url'] = item
-            out.append(val)
-        return out[:self.config['REPORT_SIZE']]
-
-    def create_report(self, log_data: list):
-        report = ''
-        if log_data:
-            with open('template/report.html', 'r') as template_handler:
-                template = template_handler.read()
-                s = Template(template)
-                table_json = json.dumps(log_data)
-                report = s.safe_substitute(table_json=table_json)
-        if report:
-            report_name = '{}/report-{}.html'.format(
-                self.config['REPORT_DIR'],
-                self.filedata.date.replace('-', '.'))
-            with open(report_name, 'w') as report_handler:
-                try:
-                    report_handler.write(report)
-                except OSError:
-                    logging.exception('Нет места на диске')
 
     def error_threshold(self, parsed_log: dict):
         try:
@@ -190,3 +138,69 @@ class LogParser:
                 }
                 self.request_time_total += request_time
                 self.collected[line[0]] = inside
+
+
+class Calculate:
+    @staticmethod
+    def prepare_data(parsed_log: dict) -> dict:
+        out = dict()
+        for key, value in parsed_log['collected'].items():
+            count = value['count']
+            count_perc = round(count / (parsed_log['total_count'] / 100), 3)
+            time_sum = round(value['time_sum'], 3)
+            time_perc = round(
+                time_sum / (parsed_log['request_time_total'] / 100), 3)
+            time_avg = round(time_sum / count, 3)
+            time_max = value['time_max']
+            time_med = round(median(value['all_request_time']), 3)
+            item = {
+                'count': count,
+                'count_perc': count_perc,
+                'time_sum': time_sum,
+                'time_perc': time_perc,
+                'time_avg': time_avg,
+                'time_max': time_max,
+                'time_med': time_med,
+            }
+            out[key] = item
+
+        return out
+
+
+class LogSorter:
+    def __init__(self, config: dict):
+        self.config = config
+
+    def sort_and_slice(self, prepared: dict) -> list:
+        def localkey(k):
+            return k[1]['time_sum']
+
+        out = list()
+        for item, val in sorted(prepared.items(), key=localkey, reverse=True):
+            val['url'] = item
+            out.append(val)
+        return out[:self.config['REPORT_SIZE']]
+
+
+class Report:
+    def __init__(self, config: dict, filedata: namedtuple):
+        self.config = config
+        self.filedata = filedata
+
+    def create(self, log_data: list):
+        report = ''
+        if log_data:
+            with open('template/report.html', 'r') as template_handler:
+                template = template_handler.read()
+                s = Template(template)
+                table_json = json.dumps(log_data)
+                report = s.safe_substitute(table_json=table_json)
+        if report:
+            report_name = '{}/report-{}.html'.format(
+                self.config['REPORT_DIR'],
+                self.filedata.date.replace('-', '.'))
+            with open(report_name, 'w') as report_handler:
+                try:
+                    report_handler.write(report)
+                except OSError:
+                    logging.exception('Нет места на диске')

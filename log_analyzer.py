@@ -25,25 +25,12 @@ config = {
 
 
 def get_config(default_config: dict, config_file: str) -> dict:
-    result_config = default_config
     module_name = os.path.splitext(config_file)[0]
-    try:
-        config = import_module(module_name)
-        result_config = dict(default_config, **config.config)
-    except ModuleNotFoundError:
-        raise ModuleNotFoundError('Конфигурационный файл {} не найден: '
-                                  ''.format(config_file))
-    except NameError:
-        raise AttributeError('Ошибка в конфигурационном '
-                             'файле: {}'.format(config_file))
-    except AttributeError:
-        pass
-    except SyntaxError:
-        raise SyntaxError('Синтаксическая ошибка в конфигурационном '
-                          'файле: {}'.format(config_file))
+    config = import_module(module_name)
+    result_config = dict(default_config, **config.config)
 
-    if 'ERROR_LOG' not in result_config:
-        result_config['ERROR_LOG'] = None
+    if 'WORK_LOG' not in result_config:
+        result_config['WORK_LOG'] = None
 
     return result_config
 
@@ -69,7 +56,6 @@ def get_last_log(config: dict) -> namedtuple:
             except ValueError:
                 logging.info('Некорректная дата лог файла {}'.format(
                     log_date_str.group()))
-                pass
 
     if log_dates:
         sorted_log_dates = sorted(log_dates)
@@ -90,7 +76,7 @@ def main():
 
     conf = get_config(default_config=config, config_file=args.config)
 
-    logging.basicConfig(filename=conf['ERROR_LOG'],
+    logging.basicConfig(filename=conf['WORK_LOG'],
                         format='[%(asctime)s] %(levelname).1s %(message)s',
                         level=logging.DEBUG)
     lastlog = get_last_log(config=conf)
